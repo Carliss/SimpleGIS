@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>SimpleGIS</title>
+    <link rel="stylesheet" href="styles/styles.css">
+    <link rel="stylesheet" href="styles/leaflet.css">
+    <link rel="stylesheet" href="styles/leaflet-draw.css">
+    <link rel="stylesheet" href="styles/bootstrap.css">
+</head>
+
+<body>
+    <div id="app" class="grid-container">
+        <div class="menu btn-group">
+            <img src="Icons/Icon.ico">
+            <div class="menu btn-group">
+                <button type="button" class="btn btn-light" data-toggle="dropdown" title='New, save, load'>
+                    Project
+                </button>
+                <div style="min-width: 5px;"></div>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" v-on:click="store_new" title="Start new project without saving">
+                        New Project
+                    </a>
+                    <a class="dropdown-item" v-on:click="store_save" title='Save state'>
+                        Save
+                    </a>
+                    <div class="dropdown-submenu dropright">
+                        <button type="button" class="dropdown-item dropdown-toggle" data-toggle="dropdown"
+                            title='Load project without saving'>
+                            Load
+                        </button>
+                        <div class="dropdown-menu">
+                            <template v-for="k in projects">
+                                <div style="display: flex;">
+                                    <a class="dropdown-item" href="#" v-on:click="store_delete_p(k[1])">
+                                        <img src="styles/images/trash.svg"></a>
+                                    <a class="dropdown-item" href="#" v-on:click="store_load_p(k[1])">Load
+                                        {{ k[0] }}</a>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" v-on:click="store_save_to" title='Save project to file on disk'>
+                        Save to..
+                    </a>
+                    <a class="dropdown-item" v-on:click="store_load_from" title='Load project from file on disk'>
+                        Load from...
+                    </a>
+                </div>
+            </div>
+            <div class="menu btn-group">
+                <button type="button" class="btn btn-light btn-left-border" data-toggle="dropdown">
+                    Add
+                </button>
+                <div class="dropdown-menu">
+                    <template v-for="(v, k) in actions">
+                        <div style="display: flex;" v-on:click="create_open(k)">
+                            <a class="dropdown-item leaflet-buttons-control-button" href="#">
+                                <img v-if="k == 'Point'" src="styles/images/pointer-draw.svg">
+                                <img v-if="k == 'Line'" src="styles/images/line-draw.svg">
+                                <img v-if="k == 'Polygon'" src="styles/images/poly-draw.svg">
+                                Add {{ k }}
+                            </a>
+                        </div>
+                    </template>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="#" v-on:click="upload()"><img
+                            src="styles/images/icons8-upload-50.png" width="24" height="24">
+                        Upload
+                    </a>
+                </div>
+            </div>
+            <div style="min-width: 5px;"></div>
+            <div class="menu btn-group">
+                <button type="button" class="btn btn-light btn-left-border" data-toggle="dropdown">
+                    Geoprocessing
+                </button>
+                <div class="dropdown-menu">
+                    <template v-for="(v, k) in geoprocessing">
+                        <a class="dropdown-item" href="#" v-on:click="geoprocessing_open(k)">
+                            <img v-if="k == 'Buffer'" src="styles/images/Qgis/buffer.png">
+                            <img v-if="k == 'Union'" src="styles/images/Qgis/union.png">
+                            <img v-if="k == 'Difference'" src="styles/images/Qgis/difference.png">
+                            <img v-if="k == 'Intersect'" src="styles/images/Qgis/intersect.png">
+                            <img v-if="k == 'Clip'" src="styles/images/Qgis/clip.png">
+                            {{ k }}
+                        </a>
+                    </template>
+                </div>
+            </div>
+            <div style="min-width: 5px;"></div>
+            <div class="menu btn-group">
+                <button type="button" class="btn btn-light btn-left-border" data-toggle="dropdown">
+                    Geometry
+                </button>
+                <div class="dropdown-menu">
+                    <template v-for="(v, k) in geometry">
+                        <a class="dropdown-item" href="#" v-on:click="geometry_open(k)">
+                            <img v-if="k == 'Voronoi'" src="styles/images/Qgis/voronoi.png">
+                            <img v-if="k == 'Tin'" src="styles/images/Qgis/delaunay.png">
+                            <img v-if="k == 'Center'" src="styles/images/Qgis/centroids.png">
+                            <img v-if="k == 'Translate'" src="styles/images/icons8-direction-24.png">
+                            <img v-if="k == 'LineIntersect'" src="styles/images/Qgis/lines_intersection.png">
+                            <img v-if="k == 'PointsWithinPolygon'" src="styles/images/Qgis/sum_points.png">
+                            <img v-if="k == 'ShortestPath'" width="24" height="24"
+                                src="styles/images/shortest-path.svg">
+                            {{ k }}
+                        </a>
+                    </template>
+                </div>
+            </div>
+            <div style="min-width: 5px;"></div>
+            <div class="menu btn-group">
+                <button type="button" class="btn btn-light btn-left-border" data-toggle="dropdown">
+                    Analysis
+                </button>
+                <div class="dropdown-menu">
+                    <template v-for="(v, k) in analysis">
+                        <a class="dropdown-item" href="#" v-on:click="analysis_open(k)">
+                            <img v-if="k == 'Area'" src="styles/images/Qgis/area-measure.png">
+                            <img v-if="k == 'Bearing'" src="styles/images/Qgis/angle-measure.png">
+                            <img v-if="k == 'Distance'" src="styles/images/Qgis/measure-length.png">
+                            <img v-if="k == 'Length'" src="styles/images/Qgis/measure-length.png">
+                            {{ k }}
+                        </a>
+                    </template>
+                </div>
+            </div>
+            <div style="min-width: 5px;"></div>
+            <div class="menu btn-group">
+                <button type="button" class="btn btn-light btn-left-border" data-toggle="dropdown">
+                    Settings
+                </button>
+                <div class="dropdown-menu">
+                    <div class="dropdown-submenu dropright">
+                        <button type="button" class="dropdown-item dropdown-toggle" data-toggle="dropdown">
+                            Set Projection
+                        </button>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" v-on:click="set_projection('Simple')">Set Simple (x,
+                                y)</a>
+                            <a class="dropdown-item" href="#" v-on:click="set_projection('EPSG3857')">Set EPSG3857 (lat,
+                                lon)</a>
+                        </div>
+                    </div>
+                    <div class="dropdown-divider"></div>
+                    <div class="dropdown-submenu dropright">
+                        <button type="button" class="dropdown-item dropdown-toggle" data-toggle="dropdown">
+                            Set Basemap
+                        </button>
+                        <div class="dropdown-menu">
+                            <div class="dropdown-submenu dropright">
+                                <button type="button" class="dropdown-item dropdown-toggle" data-toggle="dropdown">
+                                    Google
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('google','streets')">streets</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('google','hybrid')">hybrid</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('google','satellite')">satellite</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('google','terrain')">terrain</a>
+                                </div>
+                            </div>
+                            <div class="dropdown-submenu dropright">
+                                <button type="button" class="dropdown-item dropdown-toggle" data-toggle="dropdown">
+                                    Cartodb
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('cartodb','light_all')">light_all</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('cartodb','dark_all')">dark_all</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('cartodb','light_nolabels')">light_nolabels</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('cartodb','light_only_labels')">light_only_labels</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('cartodb','dark_nolabels')">dark_nolabels</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('cartodb','dark_only_labels')">dark_only_labels</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('cartodb','voyager')">voyager</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('cartodb','voyager_nolabels')">voyager_nolabels</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('cartodb','voyager_only_labels')">voyager_only_labels</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('cartodb','voyager_labels_under')">voyager_labels_under</a>
+                                </div>
+                            </div>
+                            <div class="dropdown-submenu dropright">
+                                <button type="button" class="dropdown-item dropdown-toggle" data-toggle="dropdown">
+                                    Alternative
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('watercollor')">Watercolor</a>
+                                    <a class="dropdown-item" href="#"
+                                        v-on:click="set_base_map('tonerlite')">TonerLite</a>
+                                    <a class="dropdown-item" href="#" v-on:click="set_base_map('terrain')">Terrain</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <a class="dropdown-item" href="#" v-on:click="remove_basemap()">Remove Basemap</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="#" v-on:click="upload_base_image()">Upload base image</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="map">
+            <div id="map" class="map"></div>
+        </div>
+
+        <div class="side">
+            <div class="side-layers-main card text-center">
+                <div class="card-header" style="display:flex;">
+                    <svg viewBox="0 0 60 55"
+                        style="left: 2px; top: 2px; width: 28px; height: 28px; display: block; position: relative; overflow: hidden;">
+                        <g>
+                            <g>
+                                <g transform="translate(0.5,0.5)" style="visibility: visible;">
+                                    <path
+                                        d="M 21 22 L 2 13 L 21 5 L 39 13 Z M 21 29 L 2 21 L 7 19 L 21 25 L 35 19 L 39 21 Z M 21 37 L 2 28 L 7 26 L 21 33 L 35 26 L 39 28 Z"
+                                        fill="#221f1f" stroke="none" pointer-events="all"></path>
+                                </g>
+                            </g>
+                        </g>
+                    </svg>
+                    Layers
+                </div>
+                <div class="side-layers">
+                    <ul class="list-group list-group-flush">
+                        <template v-for="layer_z_o of layers_sorted_by_z_descending">
+
+                            <li class="list-group-item" v-for="(value, key) in layer_z_o">
+                                <div :id="key" class="layer_item" @contextmenu='test' :title="key">
+                                    <input class="checkbox_layer" :id="key" type="checkbox" v-model.lazy="value.show"
+                                        @change="draw_geojson">
+                                    <input :id="key" v-model.lazy="value.style.color" class="form-control" type="color">
+                                    <input :id="key" v-model.lazy="value.name" class="layer_name form-control"
+                                        type="text" @change="checkName">
+                                    <img :id="key" v-on:click="zoom_too_layer(key)"
+                                        src="styles/images/icons8-search.svg">
+                                    <div :id="key" class="z" title="Push layer upp or down">
+                                        <img class="rotate_180" src="styles/images/icons8-sort-down-24.png" :id="key"
+                                            v-on:click="layer_push_up(key)">
+                                        <img class="hover_scale" src="styles/images/icons8-sort-down-24.png" :id="key"
+                                            v-on:click="layer_push_down(key)">
+                                    </div>
+                                    <img :id="key" v-on:click="layer_delete(key)" src="styles/images/trash.svg">
+                                </div>
+                            </li>
+                        </template>
+                        <li class="list-group-item">
+
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-header" style="font-size: 10px; display: flex; justify-content: center;">
+                    <div>
+                        {{ x.toFixed(5) }}
+                    </div>
+                    &nbsp:&nbsp
+                    <div>
+                        {{ y.toFixed(5) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- bootstrap dependency -->
+    <script src="scripts/popper.js"></script>
+    <!-- bootstrap dependency -->
+    <script src="scripts/tooltip.js"></script>
+    <!-- bootstrap -->
+    <script src="scripts/bootstrap.js"></script>
+    <!-- geo processing -->
+    <script src="scripts/turf.js"></script>
+    <!-- vue -->
+    <script src="scripts/vue.js"></script>
+    <!-- leaflet -->
+    <script src="scripts/leaflet.js"></script>
+    <!-- leaflet draw -->
+    <script src="scripts/leaflet.pm.js"></script>
+    <!-- To bea ble to use N33 -->
+    <!-- <script src="scripts/proj4.js"></script> -->
+    <!-- To bea ble to use N33 with leaflet-->
+    <!-- <script src="scripts/proj4leaflet.js"></script> -->
+    <!-- Main -->
+    <script src="renderer.js"></script>
+</body>
+
+</html>

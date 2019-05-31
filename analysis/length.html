@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Analysis </title>
+    <link rel="stylesheet" href="../styles/styles.css">
+    <link rel="stylesheet" href="../styles/bootstrap.css">
+
+</head>
+
+<body>
+    <div id="app" class="container">
+        <div class="col">
+            <div class="col">
+                <div class="form-group">
+                    <label>Select layer to be calculated:</label>
+                    <select class="form-control custom-select" v-model='selected_1'>
+                        <option :value="null" disabled hidden>Select Layer</option>
+                        <template v-if="layers">
+                            <template v-if="layers" v-for="name in valid_layers_name">
+                                    <option v-bind:value="name">{{name}}</option>
+                            </template>
+                        </template>
+                    </select>
+                </div>
+            </div>
+            <div class="col">
+                <label>Length of Line of Polygon in meters:</label>
+                <div>
+                    {{data_3_decimals}}
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+    <script src="../scripts/popper.js"></script>
+    <script src="../scripts/tooltip.js"></script>
+    <script src="../scripts/bootstrap.js"></script>
+    <script src="../scripts/turf.js"></script>
+    <script src="../scripts/vue.js"></script>
+    <script>
+        const electron = require('electron');
+        const { ipcRenderer } = electron;
+
+        let app = new Vue({
+            el: '#app',
+            data: {
+                type: null,
+                
+                selected_1: null,
+
+                data: null,
+                
+                layers: null,
+            },
+            watch: {
+                selected_1: function (n, o) {
+                    this.create_data()
+                },
+            },
+            computed: {
+               // returns the valid layer names
+                valid_layers_name() {
+                    return this.valid_layers.map((l) => { return l.name })
+                },
+                // get geosjon from selected layer
+                selected_1_layer_data() {
+                    return this.layers[this.selected_1].data
+                },
+                // returns data with 3 decimals or null if no data
+                data_3_decimals() {
+                    return this.data ? this.data.toFixed(3) : null
+                }
+            },
+            methods: {
+                // read data from selected layer and calculate the length if the data is valid
+                create_data() {
+                    try {
+                        let options = { units: 'meters' };
+                        this.data = turf.length(
+                            this.selected_1_layer_data,
+                            options
+                        )
+                    }
+                    catch (err) {
+                        // if an error occurs, we set the data to null
+                        this.data = null;
+                    }
+                },
+
+                set_app_state(state) {
+                    this.layers = state.layers;
+                    this.layers_name = Object.keys(state.layers);
+                    document.title += ' ' + state.type
+                    this.type = state.type;
+                    // make only layers with type polygon selectable
+                    this.valid_layers = Object.values(state.layers).filter(function (l) {
+                        return ['Polygon', 'LineString'].includes(l.type)
+                    })
+                },
+            }
+        })
+        // adds the type to app
+        ipcRenderer.on('analysis:type', function (event, state) {
+            app.set_app_state(state)
+        });
+    </script>
+</body>
+
+</html>

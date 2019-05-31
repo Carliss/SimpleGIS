@@ -1,0 +1,24 @@
+<html>
+
+<body>
+    <pre>
+<code id=data>
+[
+    {
+        'Simple': 'GIS',
+    }
+]
+
+</code>
+</pre>
+    <script>
+        const electron = require('electron');
+        const { ipcRenderer } = electron;
+        ipcRenderer.on('data:type', function (event, data) {
+                document.getElementById('data').innerHTML = data;
+            });
+    </script>
+</body>
+
+
+</html>

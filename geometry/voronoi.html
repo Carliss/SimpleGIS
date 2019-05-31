@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Geometry </title>
+    <link rel="stylesheet" href="../styles/styles.css">
+    <link rel="stylesheet" href="../styles/bootstrap.css">
+
+</head>
+
+<body>
+    <div id="app" class="container">
+        <div class="col">
+            <div class="col">
+                <label>New layer name:</label>
+                <div class="input-group">
+                    <input v-model="layer_name" class="form-control" v-bind:class="{ 'is-invalid': !layer_valid }"
+                        placeholder="Layer name" type="text">
+                    <div class="input-group-append">
+                        <span class="input-group-text">
+            
+                            <input v-model.lazy="color" class="form-control" type="color">
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label>Select MultiPoint layer:</label>
+                    <select class="form-control custom-select" v-model='selected'>
+                        <option :value="null" disabled hidden>Select Layer</option>
+                        <template v-if="layers">
+                            <template v-if="layers" v-for="name in valid_layers_name">
+                                    <option v-bind:value="name">{{name}}</option>
+                            </template>
+                        </template>
+                    </select>
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label>Select layer to create bbox:</label>
+                    <select class="form-control custom-select" v-model='bbox_layer'>
+                        <option :value="null" disabled hidden>Select Layer</option>
+                        <template v-if="layers">
+                            <template v-if="layers" v-for="name in valid_layers_name">
+                                    <option v-bind:value="name">{{name}}</option>
+                            </template>
+                        </template>
+                    </select>
+                </div>
+            </div>
+            <div class="col" style="padding-top: 20px; ">
+                <button type="button" class="add-layer" v-on:click="create_layer">Add</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="../scripts/popper.js"></script>
+    <script src="../scripts/tooltip.js"></script>
+    <script src="../scripts/bootstrap.js"></script>
+    <script src="../scripts/turf.js"></script>
+    <script src="../scripts/vue.js"></script>
+
+    <script>
+        const electron = require('electron');
+        const { ipcRenderer } = electron;
+
+        let app = new Vue({
+            el: '#app',
+            data: {
+                type: null,
+                type_placeholder: null,
+
+                coords_valid: false,
+                
+                selected: null,
+                bbox_layer: null,
+
+                data: null,
+                
+                layers: null,
+                layer_name: null,
+                layer_valid: false,
+                
+                color: null,
+            },
+            watch: {
+                // validates new layer name
+                layer_name: function (new_layer, old_layer) {
+                    if (!this.layers_name.includes(new_layer) && new_layer) { this.layer_valid = true }
+                    else { this.layer_valid = false }
+                },
+                // update date when changed
+                selected: function (n, o) {
+                    this.create_data()
+                },
+                // update date when changed
+                bbox_layer: function (n, o) {
+                    this.create_data()
+                },
+            },
+            computed: {
+                // determines if the layer is valid and can be returned to the map
+                valid: function () {
+                    return (this.coords_valid && this.layer_valid)
+                },
+                // returns the valid layer names
+                valid_layers_name() {
+                    return this.valid_layers.map((l) => { return l.name })
+                },
+                // get geosjon from selected layer
+                selected_layer_data () {
+                    return this.layers[this.selected].data
+                },
+                // get bbox of selected layer
+                bbox () {
+                    return turf.bbox(this.layers[this.bbox_layer].data)
+                },
+            },
+            methods: {
+                 // read data from selected layer and calculate the voronoi if the data is valid
+                create_data() {
+                    try {
+                        let options = {
+                            bbox: this.bbox
+                        };
+                        this.data = turf.voronoi(this.selected_layer_data, options)
+                        this.coords_valid = true
+                    }
+                    catch (err) {
+                        // if an error occurs, we set the data to null
+                        this.data = null;
+                        this.coords_valid = false;
+                    }
+                },
+
+                set_app_state(state) {
+                    this.layers = state.layers;
+                    this.layers_name = Object.keys(state.layers);
+                    this.$set(this, 'color', state.color);
+                    this.layer_name = state.name
+                    this.coords = state.coords
+                    document.title += ' ' + state.type
+                    this.type = state.type;
+                    this.valid_layers = Object.values(state.layers).filter(function (l) {
+                        return true //['Point', 'LineString'].includes(l.type)
+                    })
+                    this.type_placeholder = '[ x, y ]'
+                },
+                create_layer() {
+                    if (this.valid) {
+                        ipcRenderer.send('geometry:add_new', {
+                            layer: {
+                                name: this.layer_name.toString(),
+                                style: {
+                                    color: this.color,
+                                },
+                                data: this.data,
+                            },
+                        });
+                    } else {
+                        // not a valid layer so we have to notify which input is invalid
+                        let ofs = 0;
+                        let invalid_fields = document.getElementsByClassName('is-invalid');
+                        function sleep(time) {
+                            return new Promise((resolve) => setTimeout(resolve, time)).then(() => {
+                                for (let i = 0; i < invalid_fields.length; i++) {
+                                    invalid_fields[i].style.background = 'rgba(255,0,0,' + Math.abs(Math.sin(ofs * Math.PI)) + ')';
+                                }
+                                ofs += 0.1;
+                                if (ofs < 1) {
+                                    sleep(time)
+                                } else {
+                                    for (let i = 0; i < invalid_fields.length; i++) {
+                                        invalid_fields[i].style.background = 'rgba(255,0,0,0)';
+                                    }
+                                }
+                            }
+                            )
+                        }
+                        sleep(20)
+                    }
+                },
+            }
+        })
+        // adds the type to app
+        ipcRenderer.on('geometry:type', function (event, state) {
+            app.set_app_state(state)
+        });
+    </script>
+</body>
+
+</html>
