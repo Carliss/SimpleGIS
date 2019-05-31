@@ -58,8 +58,9 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: true
         },
-        icon: __dirname + '/Icons/icons8-map-marker-100.png.ico',
+        icon: __dirname + '../Icons/Icon.ico',
     })
+    console.log(`${__dirname}/Icons/Icon.ico`)
     mainWindow.loadFile('index.html')
     // update store on rezise
     mainWindow.on('resize', () => {
