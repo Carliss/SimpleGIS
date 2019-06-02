@@ -141,7 +141,7 @@
                     document.title += ' ' + state.type
                     this.type = state.type;
                     this.valid_layers = Object.values(state.layers).filter(function (l) {
-                        return ['Polygon', 'LineString', 'Point'].includes(l.type)
+                        return ['Polygon', 'MultiPolygon'].includes(l.type)
                     })
                 },
                 create_layer() {

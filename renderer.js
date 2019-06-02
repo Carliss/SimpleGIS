@@ -140,7 +140,6 @@ let app = new Vue({
         layer_colors: function (n, o) {
             // if no data in layers
             if (Object.keys(this.layers).length === 0) {
-                console.log('No change in color, due to no keys in layer')
                 return
             }
             let color_changed = false;
@@ -163,7 +162,6 @@ let app = new Vue({
         // checks if name change is valid in layers
         checkName({ type, target }) {
             t = target
-            console.log('chae', type, target, target.value)
             if (type == 'change') {
                 if (target.id == target.value) {
                     target.className = "layer_name form-control";
@@ -197,7 +195,7 @@ let app = new Vue({
             let userDataPath = (electron.app || electron.remote.app).getPath('userData');
             fs.readdir(userDataPath, function (err, files) {
                 if (err) {
-                    return console.log('Unable to scan directory: ' + err);
+                    return
                 }
                 files.forEach(function (file) {
                     if (file.startsWith('project_')) {
@@ -214,7 +212,6 @@ let app = new Vue({
             // remove from map
             this.map.eachLayer(function (layer) {
                 self.map.removeLayer(layer);
-                console.log(1)
             });
             // add base map again :)
             this.map.addLayer(this.tileLayer)
@@ -261,18 +258,21 @@ let app = new Vue({
                     extensions: ['json']
                 }]
             });
-            ipcRenderer.send('store:save_to', savePath)
+            if (savePath){
+                ipcRenderer.send('store:save_to', savePath)
+            }
         },
         // load project from 
         store_load_from() {
             let a;
             const filePath = dialog.showOpenDialog({ properties: ['openFile'] });
-            if (filePath.length) {
+            if (filePath && filePath.length) {
                 try {
                     let project = fs.readFileSync(filePath[0]);
                     a = JSON.parse(project)
                     ipcRenderer.send('store:load', { name: path.basename(filePath[0]), data: a })
                 } catch (err) {
+                    //throw (err)
                 }
             }
         },
@@ -468,7 +468,7 @@ let app = new Vue({
         // upload base image
         upload_base_image() {
             const filePath = dialog.showOpenDialog({ properties: ['openFile'] });
-            if (filePath.length) {
+            if (filePath && filePath.length) {
                 try {
                     let imag_path = filePath[0]
                     let imagebounds = [[90, -90], [-90, 90]]
@@ -477,8 +477,7 @@ let app = new Vue({
                     this.tileLayer = L.imageOverlay(imag_path, imagebounds).addTo(this.map);
                     this.map.setView([90 / 2, 90 / 2], 0)
                 } catch (err) {
-                    throw(err);
-                    
+                    //throw (err);
                 }
             }
         },
@@ -524,6 +523,7 @@ let app = new Vue({
 
         // base function to create a layer
         layer_create(layer) {
+            let big_file = layer.big || false;
             let self = this;
             let data = layer.data || false
             let name = layer.name
@@ -566,48 +566,48 @@ let app = new Vue({
                             }
 
                         }
-                        console.log(feature.properties)
                         return feature.properties;
                     },
 
                 }
             )
-            _layer.pm.enable();
-            _layer.on('pm:edit', function (e) {
-                // called on edit and draw
-                console.log('edit', e)
-                let layer_name = e.sourceTarget.feature.properties.layer_name
-                let layer = self.layers[layer_name];
-                self.layer_remove(layer_name)
-                if (e.target) {  // created layer from edit or drag
-                    layer['data'] = e.target.toGeoJSON().features[0]
-                } else {  // Some changes may result in remove all data
-                    layer['data'] = false;  // set "empty" data, will not be drawn to map
-                }
-                layer['show'] = true;  // set show to true after it was set to false in layer_remove
-                self.layer_create(layer)
-            });
+            if (!big_file) {
+                _layer.pm.enable();
+                _layer.on('pm:edit', function (e) {
+                    // called on edit and draw
+                    let layer_name = e.sourceTarget.feature.properties.layer_name
+                    let layer = self.layers[layer_name];
+                    self.layer_remove(layer_name)
+                    if (e.target) {  // created layer from edit or drag
+                        layer['data'] = e.target.toGeoJSON().features[0]
+                    } else {  // Some changes may result in remove all data
+                        layer['data'] = false;  // set "empty" data, will not be drawn to map
+                    }
+                    layer['show'] = true;  // set show to true after it was set to false in layer_remove
+                    self.layer_create(layer)
+                });
 
-            // // event listener on draged, dont need this since edit is called in parrallell
-            // inner_layer.on('pm:dragend', function (e) {
-            //     console.log('dragend', e)
-            // });
+                // // event listener on draged, dont need this since edit is called in parrallell
+                // inner_layer.on('pm:dragend', function (e) {
+                //     console.log('dragend', e)
+                // });
 
-            _layer.on('pm:cut', function (e) {
-                console.log('cut', e)
-                let layer_name = e.originalLayer.feature.properties.layer_name  // get layer name 
-                self.map.removeLayer(e.layer)  // remove clip layer
-                let layer = self.layers[layer_name];  // get current layer
-                self.layer_delete(layer_name)  // delete layer to update data
-                if (e.layer.pm._layers[0]) {  // created layer from edit or drag
-                    layer['data'] = e.layer.pm._layers[0].toGeoJSON()  // set cutted data as current data
-                } else {  // Some changes may result in remove all data
-                    layer['data'] = false;  // set "empty" data, will not be drawn to map
-                }
-                layer['show'] = true;  // set show to true after it was set to false in layer_delete
-                self.layer_create(layer)  // create the new layer with the updated cut
-            });
-
+                _layer.on('pm:cut', function (e) {
+                    let layer_name = e.originalLayer.feature.properties.layer_name  // get layer name 
+                    self.map.removeLayer(e.layer)  // remove clip layer
+                    let layer = self.layers[layer_name];  // get current layer
+                    self.layer_delete(layer_name)  // delete layer to update data
+                    if (e.layer.pm._layers[0]) {  // created layer from edit or drag
+                        layer['data'] = e.layer.pm._layers[0].toGeoJSON()  // set cutted data as current data
+                    } else {  // Some changes may result in remove all data
+                        layer['data'] = false;  // set "empty" data, will not be drawn to map
+                    }
+                    layer['show'] = true;  // set show to true after it was set to false in layer_delete
+                    self.layer_create(layer)  // create the new layer with the updated cut
+                });
+            } else {
+                _layer.pm.disable();
+            }
             if (show) {
                 _layer.addTo(this.map)
             }
@@ -694,10 +694,6 @@ let app = new Vue({
                 return false
             })
         },
-        // TODO
-        show_data(layer_name) {
-            console.log(this.layers[layer_name].data)
-        },
         // zoom a layer by flying from current zoom and location to the bbox of the layer
         zoom_too_layer(layer_name) {
             this.map.flyToBounds(this.layers[layer_name].layer.getBounds())
@@ -706,12 +702,18 @@ let app = new Vue({
         upload() {
             let a;
             const filePath = dialog.showOpenDialog({ properties: ['openFile'] });
-            if (filePath.length) {
+            if (filePath && filePath.length) {
                 try {
                     var geo = fs.readFileSync(filePath[0]);
                     a = JSON.parse(geo)
+
                     var extension = path.extname(filePath[0]);
-                    this.layer_create({ data: a, name: path.basename(filePath[0], extension) })
+                    let layer = {
+                        data: a,
+                        name: path.basename(filePath[0], extension),
+                        big: geo.length > 50000 ? true : false,
+                    }
+                    this.layer_create(layer)
                 } catch (err) {
                 }
             }
@@ -750,7 +752,9 @@ function get_menu(layer_name) {
                     extensions: ['json']
                 }]
             });
-            fs.writeFileSync(savePath, JSON.stringify(app.$data.layers[layer_name].data, null, 4));
+            if (savePath) {
+                fs.writeFileSync(savePath, JSON.stringify(app.$data.layers[layer_name].data, null, 4));
+            }
         }
     }))
     menu.append(new MenuItem({ type: 'separator' }))
@@ -774,7 +778,6 @@ function get_menu_map(layer_name) {
 }
 window.addEventListener('contextmenu', (e) => {
     e.preventDefault()
-    console.log(e)
     let id = e.srcElement.id
     if (id == 'map' || e.srcElement.className == 'leaflet-zoom-animated') {
         get_menu_map().popup({ window: remote.getCurrentWindow() })
@@ -791,11 +794,9 @@ ipcRenderer.on('add_layer', function (e, properties) {
     app.layer_create(properties.layer);
 });
 ipcRenderer.on('store:state', function (e, vue) {
-    console.log('hello')
     app.store_load(vue);
 });
 ipcRenderer.on('store:update', function (e) {
-    console.log('stroe:update')
     app.store_projects()
 });
 
@@ -806,7 +807,6 @@ ipcRenderer.on('store:update', function (e) {
  */
 var isCtrl = false;
 document.onkeyup = function (e) {
-    console.log(e.keyCode)
     if (e.keyCode == 17 || e.keyCode == 91) isCtrl = false;
 }
 document.onkeydown = function (e) {

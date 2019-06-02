@@ -60,7 +60,6 @@ function createWindow() {
         },
         icon: __dirname + '../Icons/Icon.ico',
     })
-    console.log(`${__dirname}/Icons/Icon.ico`)
     mainWindow.loadFile('index.html')
     // update store on rezise
     mainWindow.on('resize', () => {

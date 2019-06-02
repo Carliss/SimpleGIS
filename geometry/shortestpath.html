@@ -143,22 +143,26 @@
             methods: {
                 // read data from selected layer and calculate the shortest path if the data is valid
                 create_data() {
+                    let bg = document.getElementsByClassName('add-layer')[0].style.background;
+                    document.getElementsByClassName('add-layer')[0].style.background = 'red';
                     try {
                         let start = this.selected_1_layer_data;
                         let end = this.selected_2_layer_data;
                         let options = {
                             obstacles: turf.flatten(this.selected_3_layer_data),
                             units: 'meters',
+                            resolution: 10,
                         };
                         this.data = turf.shortestPath(start, end, options);
                         this.coords_valid = true
                     }
                     catch (err) {
-                        throw(err)
+                        //throw(err)
                         // if an error occurs, we set the data to null
                         this.data = null;
                         this.coords_valid = false;
                     }
+                    document.getElementsByClassName('add-layer')[0].style.background = bg;
                 },
 
                 set_app_state(state) {

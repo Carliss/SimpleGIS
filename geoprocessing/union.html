@@ -100,7 +100,6 @@
             methods: {
                 // read data from selected layer and calculate the union if the data is valid
                 create_data({type, target}) {
-                    console.log('hei')
                     try {
                         this.data = turf.union.apply(
                             Array,
@@ -110,7 +109,7 @@
                     }
                     catch (err) {
                         // if an error occurs, we set the data to null
-                        throw(err)
+                        // throw(err)
                         this.data = null;
                         this.coords_valid = false;
                     }
